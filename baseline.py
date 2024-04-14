@@ -220,7 +220,7 @@ if __name__ == "__main__":
     test_data_indices = convert_indices(test_data, model_w2v)
 
 
-    model = MyLSTM(model_w2v,
+    model = MyRNN(model_w2v,
               hidden_size=64,
               num_classes=2)
     model = model.to(device)
