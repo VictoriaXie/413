@@ -220,12 +220,23 @@ if __name__ == "__main__":
     test_data_indices = convert_indices(test_data, model_w2v)
 
 
-    model = MyRNN(model_w2v,
+    # model = MyRNN(model_w2v,
+    #           hidden_size=64,
+    #           num_classes=2)
+    # model = model.to(device)
+
+    # train_model(model, train_data_indices, val_data_indices, batch_size=32, num_epochs=100)
+
+    model = MyLSTM(model_w2v,
               hidden_size=64,
               num_classes=2)
+    model.load_state_dict(torch.load("best_lstm.pth"))
     model = model.to(device)
+    model.eval()
+    acc = accuracy(model, test_data_indices)
+    print(acc)
 
-    train_model(model, train_data_indices, val_data_indices, batch_size=32, num_epochs=100)
+
 
 #     param_grid = {
 #     'batch_size': [32, 64, 128],
