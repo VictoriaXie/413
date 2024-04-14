@@ -7,7 +7,6 @@ from sklearn.model_selection import train_test_split
 import torch.nn as nn
 import torch.optim as optim
 import matplotlib.pyplot as plt
-from torchtext.vocab import build_vocab_from_iterator
 from sklearn.model_selection import ParameterGrid
 
 class MyRNN(nn.Module):
@@ -26,6 +25,32 @@ class MyRNN(nn.Module):
         _, hidden = self.rnn(embedded)
         hidden = torch.cat((hidden[-2,:,:], hidden[-1,:,:]), dim=1)
         output = self.fc(hidden)
+        return output
+
+    def parameters(self):
+        for name, param in self.named_parameters():
+            if name != 'emb.weight':
+                yield param
+
+class MyLSTM(nn.Module):
+    def __init__(self, model_w2v, hidden_size, num_classes):
+        super(MyLSTM, self).__init__()
+        self.vocab_size = len(model_w2v.wv)
+        self.emb_size = model_w2v.vector_size
+        self.hidden_size = hidden_size
+        self.num_classes = num_classes
+        self.emb = nn.Embedding(self.vocab_size, self.emb_size)
+        self.lstm = nn.LSTM(self.emb_size, hidden_size, num_layers=2, bidirectional=True, batch_first=True)
+        self.fc = nn.Linear(hidden_size, num_classes)
+        self.softmax = nn.LogSoftmax()
+        self.dropout_layer = nn.Dropout(p=0.2)
+
+    def forward(self, X):
+        embedded = self.emb(X)
+        outputs, (ht, ct) = self.lstm(embedded)
+        output = self.dropout_layer(ht[-1])
+        output = self.fc(output)
+        output = self.softmax(output)
         return output
 
     def parameters(self):
@@ -67,7 +92,7 @@ def train_model(model,                # an instance of MLPModel
                 learning_rate=0.001,
                 batch_size=100,
                 num_epochs=10,
-                plot_every=5,        # how often (in # iterations) to track metrics
+                plot_every=1000,        # how often (in # iterations) to track metrics
                 plot=True):           # whether to plot the training curve
     train_loader = torch.utils.data.DataLoader(train_data,
                                                batch_size=batch_size,
@@ -80,6 +105,7 @@ def train_model(model,                # an instance of MLPModel
     # and to plot the training curve
     iters, train_loss, train_acc, val_acc = [], [], [], []
     iter_count = 0 # count the number of iterations that has passed
+    best_val_acc = 0
 
     try:
         for e in range(num_epochs):
@@ -101,6 +127,9 @@ def train_model(model,                # an instance of MLPModel
                     train_loss.append(float(loss))
                     train_acc.append(ta)
                     val_acc.append(va)
+                    if va > best_val_acc:
+                        best_val_acc = va
+                        torch.save(model.state_dict(), "best_model.pth")
                     print(iter_count, "Loss:", float(loss), "Train Acc:", ta, "Val Acc:", va)
     finally:
         # This try/finally block is to display the training curve
@@ -159,20 +188,27 @@ def collate_batch(batch):
         label_list.append(label)
 
     # TODO CONFIRM THIS PADDING VALUE!!!!   
-    X = pad_sequence(text_list, padding_value=len(model_w2v.wv)-1).transpose(0, 1)
-    t = torch.tensor(label_list, dtype=torch.long)
+    X = pad_sequence(text_list, padding_value=len(model_w2v.wv)-1).transpose(0, 1).to(device)
+    t = torch.tensor(label_list, dtype=torch.long).to(device)
     return X, t
 
 if __name__ == "__main__":
-    human_token = pd.read_csv("human_token.csv", index_col=0)
-    ai_token = pd.read_csv("ai_token.csv", index_col=0)
+    device = torch.device('cuda:0')
+
+    # human_token = pd.read_csv("human_token.csv", index_col=0)
+    # ai_token = pd.read_csv("ai_token.csv", index_col=0)
     model_w2v = Word2Vec.load("w2vmodel.model")
+    # all_tokens = pd.read_csv("all.csv", index_col=0)
 
     # Combine human token and ai token
-    token = pd.concat([human_token, ai_token], ignore_index=True)
+    # token = pd.concat([human_token, ai_token], ignore_index=True)
+
+    data = pd.read_csv('all.csv')
+    text = data.iloc[:, 0].to_numpy()
+    flag = data.iloc[:, 1].to_numpy()
 
     # Shuffle and split the data
-    X_train, X_temp, y_train, y_temp = train_test_split(token["text"], token["human_wrote"], test_size=0.2, random_state=42)
+    X_train, X_temp, y_train, y_temp = train_test_split(text, flag, test_size=0.2, random_state=42)
     X_val, X_test, y_val, y_test = train_test_split(X_temp, y_temp, test_size=0.5, random_state=42)
     train_data = list(zip(X_train, y_train))
     val_data = list(zip(X_val, y_val))
@@ -183,11 +219,13 @@ if __name__ == "__main__":
     val_data_indices = convert_indices(val_data, model_w2v)
     test_data_indices = convert_indices(test_data, model_w2v)
 
-    model = MyRNN(model_w2v,
+
+    model = MyLSTM(model_w2v,
               hidden_size=64,
               num_classes=2)
+    model = model.to(device)
 
-    train_model(model, train_data_indices[:20], val_data_indices[:20], batch_size=5, num_epochs=4)
+    train_model(model, train_data_indices, val_data_indices, batch_size=32, num_epochs=100)
 
 #     param_grid = {
 #     'batch_size': [32, 64, 128],
