@@ -260,9 +260,9 @@ def test(args):
 
 def get_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--train", type=str, default="train.txt")
-    parser.add_argument("--dev", type=str, default="dev.txt")
-    parser.add_argument("--test", type=str, default="test.txt")
+    parser.add_argument("--train", type=str, default="data/train.txt")
+    parser.add_argument("--dev", type=str, default="data/dev.txt")
+    parser.add_argument("--test", type=str, default="data/test.txt")
     parser.add_argument("--seed", type=int, default=11711)
     parser.add_argument("--epochs", type=int, default=10)
     parser.add_argument("--option", type=str,
