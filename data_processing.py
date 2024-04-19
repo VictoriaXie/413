@@ -85,3 +85,7 @@ def train_w2v():
     )
     model.train(total_sentences, total_examples=len(total_sentences), epochs=model.epochs)
     model.save('/content/w2vmodel.model')
+
+if __name__ == '__main__':
+    process_csv()
+    train_w2v()
