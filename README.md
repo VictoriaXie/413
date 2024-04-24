@@ -22,7 +22,7 @@ python3 baseline.py
 To run the bert model:
 
 ```bash
-python3 bert/train_model.py
+python3 bert/classifier.py
 ```
 
 ## Technologies Used
