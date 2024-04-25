@@ -29,7 +29,7 @@ python3 bert/classifier.py
 
 - Python
 - PyTorch
-- BERT (Hugging Face Transformers)
+- BERT
 
 ## Dataset
 
