@@ -29,7 +29,7 @@ python3 bert/classifier.py
 
 - Python
 - PyTorch
-- BERT
+- BERT (Based on the implementation of paper)[BERT](https://arxiv.org/abs/1810.04805)
 
 ## Dataset
 
